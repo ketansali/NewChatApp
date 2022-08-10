@@ -26,12 +26,11 @@ exports.signUp = asyncHandler(async (req, res) => {
     if (user) {
       res.status(201).json({
         message: "SignUp Successfully",
-        token: generateToken({
-          _id: user._id,
-          email: user.email,
-          name: user.name,
-          pic: user.pic,
-        }),
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        pic: user.pic,
+        token: generateToken({ _id: user._id}),
       });
     } else {
       res.status(400);
@@ -52,11 +51,11 @@ exports.signIn = asyncHandler(async (req, res) => {
     const user = await User.findOne({ email });
     if (user && (await user.matchPassword(password))) {
       res.json({
+        token: generateToken(user._id),
         _id: user._id,
         name: user.name,
         email: user.email,
         pic: user.pic,
-        token: generateToken(user._id),
         message: "LogIn Successfully",
       });
     } else {
@@ -68,3 +67,21 @@ exports.signIn = asyncHandler(async (req, res) => {
     throw new Error(err);
   }
 });
+
+exports.getUsers = asyncHandler(async(req,res)=>{
+  const keyword = req.query.search ?
+    {
+      $or :[
+        {name : {$regex:req.query.search,$options:'i'}},
+        {email: {$regex:req.query.search,$options:'i'}}
+      ]
+    }
+  :{}
+  try{
+      const users = await User.find(keyword).find({_id:{$ne:req.user._id}})
+       return res.status(200).json(users)
+  }catch(error){
+    res.status(400)
+    throw new Error(error)
+  }
+})
